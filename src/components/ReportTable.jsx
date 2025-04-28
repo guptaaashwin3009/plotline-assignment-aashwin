@@ -1,7 +1,8 @@
 import React from 'react';
+import { formatTime } from '../utils/priorityUtils';
 
-export default function ReportTable({ completed }) {
-  if (!completed.length) return null;
+export default function ReportTable({ allTrains }) {
+  if (!allTrains.length) return null;
   return (
     <div style={{ margin: '2rem 0' }}>
       <h3>Arrived & Departed Trains</h3>
@@ -10,21 +11,21 @@ export default function ReportTable({ completed }) {
           <tr>
             <th>Train Number</th>
             <th>Priority</th>
-            <th>Scheduled Arrival</th>
-            <th>Actual Arrival</th>
-            <th>Scheduled Departure</th>
-            <th>Actual Departure</th>
+            <th>Scheduled Arrival Time</th>
+            <th>Actual Arrival Time</th>
+            <th>Scheduled Departure Time</th>
+            <th>Actual Departure Time</th>
           </tr>
         </thead>
         <tbody>
-          {completed.map(t => (
-            <tr key={t.trainNumber + t.actualDeparture}>
+          {allTrains.map(t => (
+            <tr key={t.trainNumber}>
               <td>{t.trainNumber}</td>
               <td>{t.priority}</td>
-              <td>{t.arrivalTime || t.scheduledArrival}</td>
-              <td>{t.actualArrival ? new Date(t.actualArrival).toLocaleTimeString() : ''}</td>
-              <td>{t.departureTime || t.scheduledDeparture}</td>
-              <td>{t.actualDeparture ? new Date(t.actualDeparture).toLocaleTimeString() : ''}</td>
+              <td>{formatTime(t.scheduledArrival)}</td>
+              <td>{formatTime(t.actualArrival)}</td>
+              <td>{formatTime(t.scheduledDeparture)}</td>
+              <td>{formatTime(t.actualDeparture)}</td>
             </tr>
           ))}
         </tbody>

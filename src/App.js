@@ -12,14 +12,12 @@ function App() {
   const scheduler = useTrainScheduler(platformCount);
 
   const handleCSV = (data) => {
-    // Normalize CSV fields and convert times to Date objects
+    // Normalize CSV fields and convert times to hh:mm:ss
     const trains = data.map(row => ({
       trainNumber: row['Train Number'],
       priority: row['Priority'],
-      arrivalTime: row['Arrival Time'],
-      departureTime: row['Departure Time'],
-      scheduledArrival: row['Arrival Time'],
-      scheduledDeparture: row['Departure Time'],
+      arrivalTime: row['Arrival Time'] && row['Arrival Time'].length === 5 ? row['Arrival Time'] + ':00' : row['Arrival Time'],
+      departureTime: row['Departure Time'] && row['Departure Time'].length === 5 ? row['Departure Time'] + ':00' : row['Departure Time'],
     }));
     scheduler.loadTrains(trains);
   };
@@ -31,7 +29,7 @@ function App() {
       <UploadCSV onUpload={handleCSV} />
       <PlatformDashboard platforms={scheduler.platforms} now={scheduler.now} />
       <TrainTable waiting={scheduler.waiting} />
-      <ReportTable completed={scheduler.completed} />
+      <ReportTable allTrains={scheduler.allTrains} />
     </div>
   );
 }
