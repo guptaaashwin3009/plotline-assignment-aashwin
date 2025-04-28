@@ -1,8 +1,18 @@
 import React from 'react';
 import { formatTime } from '../utils/priorityUtils';
 
+function deduplicateByTrainNumber(trains) {
+  // Keep only the last occurrence for each train number
+  const map = new Map();
+  trains.forEach(t => {
+    map.set(t.trainNumber, t);
+  });
+  return Array.from(map.values());
+}
+
 export default function ReportTable({ allTrains }) {
   if (!allTrains.length) return null;
+  const dedupedTrains = deduplicateByTrainNumber(allTrains);
   return (
     <div style={{ margin: '2rem 0' }}>
       <h3>Arrived & Departed Trains</h3>
@@ -18,7 +28,7 @@ export default function ReportTable({ allTrains }) {
           </tr>
         </thead>
         <tbody>
-          {allTrains.map(t => (
+          {dedupedTrains.map(t => (
             <tr key={t.trainNumber}>
               <td>{t.trainNumber}</td>
               <td>{t.priority}</td>

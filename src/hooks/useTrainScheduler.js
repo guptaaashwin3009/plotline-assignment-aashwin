@@ -55,12 +55,12 @@ function reducer(state, action) {
       });
       trains = trains.sort(comparePriority);
       const platforms = Array(state.platformCount).fill(null);
-      const waiting = [];
+      let waiting = [];
       const allTrains = trains.map(t => ({ ...t }));
       let used = 0;
+      // Assign as many trains as possible to platforms
       for (let i = 0; i < trains.length; ++i) {
         if (used < state.platformCount && trains[i].scheduledArrival <= now) {
-          // For initial trains, actual = scheduled
           const actualArrival = trains[i].scheduledArrival;
           const actualDeparture = trains[i].scheduledDeparture;
           platforms[used] = {
@@ -78,17 +78,20 @@ function reducer(state, action) {
             actualDeparture,
           };
           used++;
-        } else {
-          waiting.push(trains[i]);
         }
       }
+      // Waiting: only those whose scheduledArrival <= now and not on platform
+      waiting = trains.filter(
+        t => t.scheduledArrival <= now &&
+        !platforms.some(slot => slot && slot.train && slot.train.csvIndex === t.csvIndex)
+      );
+      console.log('allTrains after LOAD_TRAINS:', allTrains);
       return { ...getInitialState(state.platformCount), platforms, waiting, allTrains, now, startTime: now };
     }
     case 'TICK': {
       if (!state.startTime) return state;
       const now = new Date(state.startTime.getTime() + (Date.now() - state.startTime.getTime()));
       let { platforms, waiting, completed, allTrains } = state;
-      
       platforms = platforms.map((slot, idx) => {
         if (slot && now >= slot.train.actualDeparture) {
           completed = [
@@ -100,7 +103,6 @@ function reducer(state, action) {
         }
         return slot;
       });
-
       let freeIndexes = platforms.map((p, i) => (p ? null : i)).filter(i => i !== null);
       if (freeIndexes.length && waiting.length) {
         waiting = [...waiting].sort(comparePriority);
@@ -108,16 +110,12 @@ function reducer(state, action) {
           const nextIdx = waiting.findIndex(t => t.scheduledArrival <= now);
           if (nextIdx !== -1) {
             const train = waiting[nextIdx];
-            const delay = now - train.scheduledArrival;
             const stay = getStayDuration(train.scheduledArrival, train.scheduledDeparture);
             const actualArrival = now;
-            
-            // Calculate actual departure, handling date rollover
             let actualDeparture = new Date(now.getTime() + stay);
             if (actualDeparture < actualArrival) {
               actualDeparture = adjustDateForNextDay(actualDeparture);
             }
-
             const updatedTrain = {
               ...train,
               status: 'onPlatform',
@@ -130,7 +128,13 @@ function reducer(state, action) {
           }
         });
       }
-      return { ...state, platforms, waiting, completed, allTrains, now };
+      // Waiting: only those whose scheduledArrival <= now and not on platform
+      const allWaiting = allTrains.filter(
+        t => t.scheduledArrival <= now &&
+        !platforms.some(slot => slot && slot.train && slot.train.csvIndex === t.csvIndex) &&
+        (!t.actualDeparture || now < t.actualDeparture)
+      );
+      return { ...state, platforms, waiting: allWaiting, completed, allTrains, now };
     }
     case 'DELAY_TRAIN': {
       const { trainNumber, minutes } = action;
