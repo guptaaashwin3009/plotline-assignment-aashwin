@@ -14,7 +14,23 @@ function getInitialState(platformCount) {
 }
 
 function getStayDuration(scheduledArrival, scheduledDeparture) {
-  return new Date(scheduledDeparture) - new Date(scheduledArrival);
+  // Handle case where departure is on next day
+  if (scheduledDeparture < scheduledArrival) {
+    scheduledDeparture = new Date(scheduledDeparture.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return scheduledDeparture - scheduledArrival;
+}
+
+function getMidnightToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function adjustDateForNextDay(date) {
+  const nextDay = new Date(date);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay;
 }
 
 function reducer(state, action) {
@@ -23,9 +39,10 @@ function reducer(state, action) {
       return getInitialState(action.platformCount);
     case 'LOAD_TRAINS': {
       const now = new Date();
+      const baseDate = getMidnightToday();
       let trains = action.trains.map((t, i) => {
-        const scheduledArrival = parseTimeString(t.arrivalTime, now);
-        const scheduledDeparture = parseTimeString(t.departureTime, now);
+        const scheduledArrival = parseTimeString(t.arrivalTime, baseDate);
+        const scheduledDeparture = parseTimeString(t.departureTime, baseDate);
         return {
           ...t,
           csvIndex: i,
@@ -71,6 +88,7 @@ function reducer(state, action) {
       if (!state.startTime) return state;
       const now = new Date(state.startTime.getTime() + (Date.now() - state.startTime.getTime()));
       let { platforms, waiting, completed, allTrains } = state;
+      
       platforms = platforms.map((slot, idx) => {
         if (slot && now >= slot.train.actualDeparture) {
           completed = [
@@ -82,6 +100,7 @@ function reducer(state, action) {
         }
         return slot;
       });
+
       let freeIndexes = platforms.map((p, i) => (p ? null : i)).filter(i => i !== null);
       if (freeIndexes.length && waiting.length) {
         waiting = [...waiting].sort(comparePriority);
@@ -92,7 +111,13 @@ function reducer(state, action) {
             const delay = now - train.scheduledArrival;
             const stay = getStayDuration(train.scheduledArrival, train.scheduledDeparture);
             const actualArrival = now;
-            const actualDeparture = new Date(now.getTime() + stay);
+            
+            // Calculate actual departure, handling date rollover
+            let actualDeparture = new Date(now.getTime() + stay);
+            if (actualDeparture < actualArrival) {
+              actualDeparture = adjustDateForNextDay(actualDeparture);
+            }
+
             const updatedTrain = {
               ...train,
               status: 'onPlatform',
@@ -115,6 +140,12 @@ function reducer(state, action) {
           const train = { ...slot.train };
           train.actualArrival = new Date(train.actualArrival.getTime() + minutes * 60000);
           train.actualDeparture = new Date(train.actualDeparture.getTime() + minutes * 60000);
+          
+          // Handle date rollover for delayed departures
+          if (train.actualDeparture < train.actualArrival) {
+            train.actualDeparture = adjustDateForNextDay(train.actualDeparture);
+          }
+          
           allTrains[train.csvIndex] = train;
           return { train };
         }
@@ -122,7 +153,17 @@ function reducer(state, action) {
       });
       waiting = waiting.map(t => {
         if (t.trainNumber === trainNumber) {
-          const updated = { ...t, scheduledArrival: new Date(t.scheduledArrival.getTime() + minutes * 60000), scheduledDeparture: new Date(t.scheduledDeparture.getTime() + minutes * 60000) };
+          const updated = { 
+            ...t, 
+            scheduledArrival: new Date(t.scheduledArrival.getTime() + minutes * 60000),
+            scheduledDeparture: new Date(t.scheduledDeparture.getTime() + minutes * 60000)
+          };
+          
+          // Handle date rollover for delayed scheduled times
+          if (updated.scheduledDeparture < updated.scheduledArrival) {
+            updated.scheduledDeparture = adjustDateForNextDay(updated.scheduledDeparture);
+          }
+          
           allTrains[t.csvIndex] = updated;
           return updated;
         }
