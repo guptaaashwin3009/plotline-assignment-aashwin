@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatTime } from '../utils/priorityUtils';
 import TrainAnimation from './TrainAnimation';
 
@@ -15,44 +15,69 @@ function isTrainDelayed(train) {
   return train.actualArrival > train.scheduledArrival;
 }
 
-export default function PlatformDashboard({ platforms, now, waiting }) {
+function areTrainsEqual(train1, train2) {
+  if (!train1 || !train2) return train1 === train2;
+  return (
+    train1.trainNumber === train2.trainNumber &&
+    train1.actualArrival?.getTime() === train2.actualArrival?.getTime() &&
+    train1.actualDeparture?.getTime() === train2.actualDeparture?.getTime()
+  );
+}
+
+function arePlatformsEqual(platforms1, platforms2) {
+  if (!platforms1 || !platforms2 || platforms1.length !== platforms2.length) return false;
+  return platforms1.every((slot, idx) => {
+    const slot1 = slot?.train;
+    const slot2 = platforms2[idx]?.train;
+    return areTrainsEqual(slot1, slot2);
+  });
+}
+
+export default function PlatformDashboard({ platforms, now }) {
   const [animations, setAnimations] = useState([]);
-  const [prevPlatforms, setPrevPlatforms] = useState(platforms);
+  const prevPlatformsRef = useRef(platforms);
 
   useEffect(() => {
+    // Skip if platforms haven't actually changed
+    if (arePlatformsEqual(platforms, prevPlatformsRef.current)) {
+      return;
+    }
+
     // Check for new arrivals
     platforms.forEach((slot, idx) => {
-      const prevSlot = prevPlatforms[idx];
-      if (slot && slot.train && (!prevSlot || !prevSlot.train)) {
-        // New train arrived
-        setAnimations(prev => [...prev, { 
-          id: slot.train.trainNumber + '-' + (slot.train.actualArrival ? formatTime(slot.train.actualArrival) : ''),
-          train: slot.train, 
-          type: 'incoming',
-          platformIdx: idx 
-        }]);
-      }
-    });
-
-    // Check for departures
-    prevPlatforms.forEach((slot, idx) => {
-      if (slot && slot.train && (!platforms[idx] || !platforms[idx].train)) {
-        // Train departed
-        const animId = slot.train.trainNumber + '-' + (slot.train.actualDeparture ? formatTime(slot.train.actualDeparture) : '');
+      const prevSlot = prevPlatformsRef.current[idx];
+      if (slot?.train && (!prevSlot?.train || !areTrainsEqual(slot.train, prevSlot.train))) {
+        const animId = `${slot.train.trainNumber}-arrival-${formatTime(slot.train.actualArrival)}`;
         setAnimations(prev => {
-          // Prevent duplicate departing animations for the same train event
-          if (prev.some(a => a.id === animId && a.type === 'departing')) return prev;
-          return [...prev, { 
-            id: animId, 
-            train: slot.train, 
-            type: 'departing',
-            platformIdx: idx 
+          if (prev.some(a => a.id === animId)) return prev;
+          return [...prev, {
+            id: animId,
+            train: slot.train,
+            type: 'incoming',
+            platformIdx: idx
           }];
         });
       }
     });
 
-    setPrevPlatforms(platforms);
+    // Check for departures
+    prevPlatformsRef.current.forEach((slot, idx) => {
+      if (slot?.train && (!platforms[idx]?.train || !areTrainsEqual(platforms[idx].train, slot.train))) {
+        const animId = `${slot.train.trainNumber}-departure-${formatTime(slot.train.actualDeparture)}`;
+        setAnimations(prev => {
+          if (prev.some(a => a.id === animId)) return prev;
+          return [...prev, {
+            id: animId,
+            train: slot.train,
+            type: 'departing',
+            platformIdx: idx
+          }];
+        });
+      }
+    });
+
+    // Update ref after processing changes
+    prevPlatformsRef.current = platforms;
   }, [platforms]);
 
   const removeAnimation = (id) => {

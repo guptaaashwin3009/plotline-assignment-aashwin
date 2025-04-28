@@ -44,17 +44,21 @@ function App() {
     fs.writeFileSync('src/data/uploadedTrains.js', fileContent);
   }
 
-  // When platform count changes, reload trains from last upload
   const handlePlatformChange = (count) => {
     setPlatformCount(count);
   };
 
-  // Ensure trains are loaded into the scheduler after platform count changes
+  // Only reload trains when platform count changes
   useEffect(() => {
-    if (lastTrainsRef.current && lastTrainsRef.current.length > 0) {
-      scheduler.loadTrains(lastTrainsRef.current);
+    const trains = lastTrainsRef.current;
+    if (trains && trains.length > 0) {
+      // Small delay to ensure scheduler is ready
+      const timer = setTimeout(() => {
+        scheduler.loadTrains(trains);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [platformCount, scheduler]);
+  }, [platformCount]); // Remove scheduler dependency
 
   return (
     <div
