@@ -26,7 +26,7 @@ export default function PlatformDashboard({ platforms, now, waiting }) {
       if (slot && slot.train && (!prevSlot || !prevSlot.train)) {
         // New train arrived
         setAnimations(prev => [...prev, { 
-          id: Date.now(), 
+          id: slot.train.trainNumber + '-' + (slot.train.actualArrival ? formatTime(slot.train.actualArrival) : ''),
           train: slot.train, 
           type: 'incoming',
           platformIdx: idx 
@@ -38,12 +38,17 @@ export default function PlatformDashboard({ platforms, now, waiting }) {
     prevPlatforms.forEach((slot, idx) => {
       if (slot && slot.train && (!platforms[idx] || !platforms[idx].train)) {
         // Train departed
-        setAnimations(prev => [...prev, { 
-          id: Date.now(), 
-          train: slot.train, 
-          type: 'departing',
-          platformIdx: idx 
-        }]);
+        const animId = slot.train.trainNumber + '-' + (slot.train.actualDeparture ? formatTime(slot.train.actualDeparture) : '');
+        setAnimations(prev => {
+          // Prevent duplicate departing animations for the same train event
+          if (prev.some(a => a.id === animId && a.type === 'departing')) return prev;
+          return [...prev, { 
+            id: animId, 
+            train: slot.train, 
+            type: 'departing',
+            platformIdx: idx 
+          }];
+        });
       }
     });
 
@@ -70,19 +75,21 @@ export default function PlatformDashboard({ platforms, now, waiting }) {
                 : '#e8f5e9' // Light green for on-time trains
               : '#f9f9f9',
             position: 'relative',
-            transition: 'all 0.5s',
+            transition: 'all 0.7s cubic-bezier(0.4,0,0.2,1)',
             boxShadow: slot && slot.train ? '0 0 8px #2a7a' : 'none',
             opacity: slot && slot.train ? 1 : 0.7,
+            overflow: 'hidden',
           }}
         >
           <div style={{ fontWeight: 600 }}>Platform {idx + 1}</div>
           {slot && slot.train ? (
             <div
               style={{
-                transition: 'all 0.5s',
+                transition: 'all 0.7s cubic-bezier(0.4,0,0.2,1)',
                 color: isTrainDelayed(slot.train) ? '#d32f2f' : '#2e7d32',
                 fontWeight: 500,
                 animation: 'fadein 0.7s',
+                opacity: 1,
               }}
             >
               {slot.train.trainNumber} - {slot.train.priority}
@@ -96,7 +103,7 @@ export default function PlatformDashboard({ platforms, now, waiting }) {
               )}
             </div>
           ) : (
-            <div style={{ color: '#aaa', animation: 'fadeout 0.7s' }}>Free</div>
+            <div style={{ color: '#aaa', animation: 'fadeout 0.7s', opacity: 0.7 }}>Free</div>
           )}
         </div>
       ))}

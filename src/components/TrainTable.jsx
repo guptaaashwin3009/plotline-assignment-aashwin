@@ -16,7 +16,7 @@ export default function TrainTable({ waiting }) {
         </thead>
         <tbody>
           {waiting.map((t) => (
-            <tr key={t.trainNumber}>
+            <tr key={t.trainNumber} style={{ transition: 'all 0.7s cubic-bezier(0.4,0,0.2,1)', animation: 'fadein 0.7s', opacity: 1 }}>
               <td>{t.trainNumber}</td>
               <td>{t.priority}</td>
               <td>{t.arrivalTime || t.scheduledArrival}</td>
@@ -25,6 +25,10 @@ export default function TrainTable({ waiting }) {
           ))}
         </tbody>
       </table>
+      <style>{`
+        @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeout { from { opacity: 1; } to { opacity: 0.5; } }
+      `}</style>
     </div>
   );
 }
