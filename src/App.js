@@ -11,6 +11,7 @@ import uploadedTrains from "./data/uploadedTrains";
 function App() {
   const [platformCount, setPlatformCount] = useState(3);
   const [csvData, setCsvData] = useState(uploadedTrains);
+  const [isLocked, setIsLocked] = useState(false);
   const scheduler = useTrainScheduler(platformCount);
   const lastTrainsRef = useRef(csvData);
 
@@ -32,6 +33,7 @@ function App() {
     setCsvData(trains);
     lastTrainsRef.current = trains;
     scheduler.loadTrains(trains);
+    setIsLocked(true); // Lock platform count after CSV upload
     // Save to file
     saveUploadedTrains(trains);
   };
@@ -45,7 +47,9 @@ function App() {
   }
 
   const handlePlatformChange = (count) => {
-    setPlatformCount(count);
+    if (!isLocked) {
+      setPlatformCount(count);
+    }
   };
 
   // Only reload trains when platform count changes
@@ -66,7 +70,11 @@ function App() {
       style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}
     >
       <h2>Train Platform Dashboard</h2>
-      <PlatformSelector value={platformCount} onChange={handlePlatformChange} />
+      <PlatformSelector 
+        value={platformCount} 
+        onChange={handlePlatformChange}
+        disabled={isLocked}
+      />
       <UploadCSV onUpload={handleCSV} />
       <PlatformDashboard platforms={scheduler.platforms} now={scheduler.now} />
       <TrainTable waiting={scheduler.waiting} />

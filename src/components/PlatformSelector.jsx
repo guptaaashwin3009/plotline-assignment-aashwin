@@ -1,53 +1,54 @@
 import React from "react";
 
-export default function PlatformSelector({ value, onChange }) {
+function PlatformSelector({ value, onChange, disabled }) {
+  const handleChange = (e) => {
+    if (!disabled) {
+      onChange(parseInt(e.target.value));
+    }
+  };
+
   return (
-    <div
-      style={{
-        margin: "1.5rem 0",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
+    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center' }}>
       <label
-        htmlFor="platform-count"
+        htmlFor="platformCount"
         style={{
-          fontWeight: 600,
-          fontSize: 16,
-          marginBottom: 8,
-          color: "#2a7aee",
+          marginRight: '10px',
+          color: disabled ? '#6c757d' : '#212529'
         }}
       >
-        Number of Platforms
+        Number of Platforms:
       </label>
-      <input
-        id="platform-count"
-        type="number"
-        min={2}
-        max={20}
+      <select
+        id="platformCount"
         value={value}
-        onChange={(e) => {
-          let v = Number(e.target.value);
-          if (v < 2) v = 2;
-          if (v > 20) v = 20;
-          onChange(v);
-        }}
+        onChange={handleChange}
+        disabled={disabled}
         style={{
-          width: 80,
-          padding: "8px 12px",
-          borderRadius: 6,
-          border: "1.5px solid #2a7aee",
-          fontSize: 16,
-          fontWeight: 500,
-          color: "#2a7aee",
-          outline: "none",
-          boxShadow: "0 1px 4px #2a7aee22",
-          textAlign: "center",
-          marginBottom: 4,
+          padding: '6px 12px',
+          borderRadius: '4px',
+          border: '1px solid #ced4da',
+          backgroundColor: disabled ? '#e9ecef' : '#fff',
+          cursor: disabled ? 'not-allowed' : 'pointer'
         }}
-      />
-      <div style={{ fontSize: 13, color: "#888" }}>(Min: 2, Max: 20)</div>
+      >
+        {[1, 2, 3, 4, 5].map((num) => (
+          <option key={num} value={num}>
+            {num}
+          </option>
+        ))}
+      </select>
+      {disabled && (
+        <span style={{ 
+          marginLeft: '10px',
+          color: '#6c757d',
+          fontSize: '14px',
+          fontStyle: 'italic'
+        }}>
+          Upload a new CSV to modify platforms
+        </span>
+      )}
     </div>
   );
 }
+
+export default PlatformSelector;
