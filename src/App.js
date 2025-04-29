@@ -9,7 +9,7 @@ import useTrainScheduler from "./hooks/useTrainScheduler";
 import uploadedTrains from "./data/uploadedTrains";
 
 function App() {
-  const [platformCount, setPlatformCount] = useState(3);
+  const [platformCount, setPlatformCount] = useState(2);
   const [csvData, setCsvData] = useState(uploadedTrains);
   const [isLocked, setIsLocked] = useState(false);
   const scheduler = useTrainScheduler(platformCount);
@@ -48,7 +48,9 @@ function App() {
 
   const handlePlatformChange = (count) => {
     if (!isLocked) {
-      setPlatformCount(count);
+      // Ensure count is within valid range
+      const validCount = Math.max(2, Math.min(20, count));
+      setPlatformCount(validCount);
     }
   };
 
